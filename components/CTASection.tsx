@@ -12,7 +12,7 @@ export default function CTASection() {
             Turn your ITL into USDT today
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm sm:text-base leading-7 text-neutral-600">
-            Join thousands of redeemers who trust ITLCoin for a fast,
+            Join thousands of redeemers who trust Interlink for a fast,
             transparent, and secure redemption experience. Get started in
             minutes.
           </p>

@@ -16,7 +16,11 @@ export async function POST(request: Request) {
     const {
       fullName,
       email,
+      payoutMethod,
       walletAddress,
+      bankName,
+      accountName,
+      accountNumber,
       itlAmount,
       usdtPayout,
       transactionProof,
@@ -59,7 +63,11 @@ export async function POST(request: Request) {
     const html = buildEmailHtml({
       fullName,
       email,
+      payoutMethod,
       walletAddress,
+      bankName,
+      accountName,
+      accountNumber,
       itlAmount,
       usdtPayout,
       transactionProof,
@@ -85,7 +93,11 @@ export async function POST(request: Request) {
 function buildEmailHtml(data: {
   fullName: string;
   email: string;
+  payoutMethod: string;
   walletAddress: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
   itlAmount: string;
   usdtPayout: string;
   transactionProof: string;
@@ -93,7 +105,11 @@ function buildEmailHtml(data: {
   const {
     fullName,
     email,
+    payoutMethod,
     walletAddress,
+    bankName,
+    accountName,
+    accountNumber,
     itlAmount,
     usdtPayout,
     transactionProof,
@@ -101,15 +117,20 @@ function buildEmailHtml(data: {
   const adminUrl = process.env.NEXT_PUBLIC_SITE_URL
     ? `${process.env.NEXT_PUBLIC_SITE_URL}/admin`
     : "/admin";
+  const logoUrl = process.env.NEXT_PUBLIC_SITE_URL
+    ? `${process.env.NEXT_PUBLIC_SITE_URL}/interswift.png`
+    : null;
 
   return `
   <div style="margin:0;padding:0;background:#050508;font-family:'Poppins',Arial,Helvetica,sans-serif;color:#e5e7eb;">
     <div style="max-width:600px;margin:0 auto;padding:32px 24px;">
       <!-- Header -->
       <div style="text-align:center;padding-bottom:24px;border-bottom:1px solid #2a2a3a;">
-        <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">
-          ITL<span style="color:#a78bfa;">Coin</span>
-        </div>
+        ${
+          logoUrl
+            ? `<img src="${logoUrl}" alt="Interlink" style="height:32px;width:auto;margin-bottom:8px;" />`
+            : `<div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;margin-bottom:8px;">Interlink</div>`
+        }
         <div style="font-size:12px;color:#9ca3af;margin-top:4px;text-transform:uppercase;letter-spacing:1.5px;">
           Redemption Alert
         </div>
@@ -142,9 +163,26 @@ function buildEmailHtml(data: {
             <td style="padding:10px 0;color:#ffffff;">${email || "—"}</td>
           </tr>
           <tr>
+            <td style="padding:10px 0;color:#9ca3af;vertical-align:top;">Payout Method</td>
+            <td style="padding:10px 0;color:#ffffff;font-weight:600;">${payoutMethod === "crypto" ? "BEP-20 Wallet" : "Bank Transfer"}</td>
+          </tr>
+          ${
+            payoutMethod === "crypto"
+              ? `
+          <tr>
             <td style="padding:10px 0;color:#9ca3af;vertical-align:top;">BEP-20 Wallet</td>
             <td style="padding:10px 0;color:#a78bfa;font-family:monospace;font-size:12px;word-break:break-all;">${walletAddress || "—"}</td>
-          </tr>
+          </tr>`
+              : `
+          <tr>
+            <td style="padding:10px 0;color:#9ca3af;vertical-align:top;">Bank Details</td>
+            <td style="padding:10px 0;color:#ffffff;font-size:13px;">
+              <div style="font-weight:700;">${bankName || "—"}</div>
+              <div style="color:#9ca3af;">${accountName || "—"}</div>
+              <div style="color:#a78bfa;font-family:monospace;">${accountNumber || "—"}</div>
+            </td>
+          </tr>`
+          }
           <tr>
             <td style="padding:10px 0;color:#9ca3af;vertical-align:top;">ITL Amount</td>
             <td style="padding:10px 0;color:#ffffff;font-weight:700;">${itlAmount || "—"} ITL</td>
@@ -177,7 +215,7 @@ function buildEmailHtml(data: {
 
       <!-- Footer -->
       <div style="margin-top:32px;padding-top:20px;border-top:1px solid #2a2a3a;text-align:center;font-size:12px;color:#6b7280;">
-        <p style="margin:0 0 6px;">This is an automated notification from ITLCoin.</p>
+        <p style="margin:0 0 6px;">This is an automated notification from Interlink.</p>
         <p style="margin:0;">© ${new Date().getFullYear()} InterlinkChain. All rights reserved.</p>
       </div>
     </div>

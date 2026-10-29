@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { onSettingsChange } from "@/lib/settings";
 import { DEFAULT_SETTINGS, type PlatformSettings } from "@/types";
@@ -193,22 +194,21 @@ export default function Hero() {
   }, []);
 
   return (
-    <section
-      id="how-it-works"
-      className="relative overflow-hidden bg-gradient-to-br from-[#2d1b69] via-[#3b1d8a] to-[#1a0f3d]"
-    >
-      {/* Background grid */}
-      <div
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(167,139,250,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(167,139,250,0.15) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
-      {/* Glow accents */}
-      <div className="absolute top-0 left-1/4 h-96 w-96 rounded-full bg-brand-500/20 blur-3xl" />
-      <div className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl" />
+    <section id="how-it-works" className="relative overflow-hidden">
+      {/* Background Image */}
+      <div className="absolute inset-0">
+        <Image
+          src="/bin.jpg"
+          alt="Hero Background"
+          fill
+          className="object-cover"
+          priority
+        />
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-slate-950/30" />
+        {/* Subtle gradient overlay to prioritize text contrast on the left */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/50 via-slate-950/10 to-transparent lg:from-slate-950/60 lg:via-slate-950/20" />
+      </div>
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-14 sm:pt-20 pb-16 sm:pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-8 items-center">
@@ -237,8 +237,8 @@ export default function Hero() {
             </h1>
 
             <p className="max-w-xl text-base sm:text-lg leading-8 text-brand-100/90">
-              ITLCoin is the redemption gateway for InterlinkChain. Convert your
-              mined ITL into BEP-20 USDT at a fixed, transparent rate —
+              Interlink is the redemption gateway for InterlinkChain. Convert
+              your mined ITL into BEP-20 USDT at a fixed, transparent rate —
               manually-verified and delivered fast to your wallet.
             </p>
 
@@ -275,7 +275,7 @@ export default function Hero() {
       </div>
 
       {/* Bottom info bar */}
-      <div className="relative border-t border-white/10 bg-[#120a2a]/60 backdrop-blur-sm">
+      <div className="relative border-t border-white/10 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
           <div className="flex items-center gap-2 text-brand-200/80">
             <svg

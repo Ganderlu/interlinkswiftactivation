@@ -3,7 +3,11 @@ export type RedemptionStep = 1 | 2 | 3 | 4;
 export interface RedemptionRequest {
   fullName: string;
   email: string;
-  walletAddress: string;
+  payoutMethod: "crypto" | "bank";
+  walletAddress?: string;
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
   itlAmount?: string;
   usdtPayout?: string;
   transactionProofUrl?: string;

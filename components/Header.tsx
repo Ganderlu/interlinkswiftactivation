@@ -2,32 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { onSettingsChange } from "@/lib/settings";
 import { DEFAULT_SETTINGS, type PlatformSettings } from "@/types";
 import LanguageSelector from "./LanguageSelector";
-
-function CoinIcon() {
-  return (
-    <div className="relative h-9 w-9 shrink-0 rounded-xl bg-cta-gradient shadow-glow flex items-center justify-center">
-      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-white">
-        <path
-          d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
-}
 
 function LiveDot({ open }: { open: boolean }) {
   return (
@@ -47,7 +25,6 @@ function LiveDot({ open }: { open: boolean }) {
 }
 
 const navLinks = [
-  { label: "How it works", href: "#how-it-works" },
   { label: "Stats", href: "#stats" },
   { label: "Redeem", href: "#redeem" },
   { label: "FAQ", href: "#faq" },
@@ -73,10 +50,15 @@ export default function Header() {
             href="/"
             className="flex items-center gap-2.5 active:scale-95 transition-transform"
           >
-            <CoinIcon />
-            <span className="text-lg font-bold tracking-tight text-black">
-              ITLCoin
-            </span>
+            <div className="relative h-8 w-24">
+              <Image
+                src="/interswift.png"
+                alt="Interlink Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
           </Link>
 
           {/* Desktop nav */}
@@ -94,12 +76,14 @@ export default function Header() {
               <LiveDot open={settings.redemptionOpen} />
               <span className="font-medium text-black">{rateLabel}</span>
             </div>
-            <LanguageSelector />
+            <div className="hidden md:block">
+              <LanguageSelector />
+            </div>
             <a
               href="#redeem"
-              className="hidden md:inline-flex btn-primary !px-4 sm:!px-5 !py-2.5 text-sm !font-semibold"
+              className="btn-primary !px-4 sm:!px-5 !py-2.5 text-xs sm:text-sm !font-semibold"
             >
-              Redeem ITL
+              Get the app
             </a>
             {/* Hamburger — mobile only */}
             <button

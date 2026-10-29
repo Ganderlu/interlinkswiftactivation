@@ -1,12 +1,14 @@
+import Image from "next/image";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
+import WalletSection from "@/components/WalletSection";
+import DigitalAssetsSection from "@/components/DigitalAssetsSection";
 import StatsRow from "@/components/StatsRow";
 import RedemptionSection from "@/components/RedemptionSection";
-import ProcessSection from "@/components/ProcessSection";
-import FeaturesSection from "@/components/FeaturesSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import FAQSection from "@/components/FAQSection";
 import CTASection from "@/components/CTASection";
+import PhoneDisplaySection from "@/components/PhoneDisplaySection";
 
 export default function HomePage() {
   return (
@@ -22,45 +24,27 @@ export default function HomePage() {
 
       <main>
         <Hero />
+        <WalletSection />
         <StatsRow />
         <RedemptionSection />
-        <ProcessSection />
-        <FeaturesSection />
+        <DigitalAssetsSection />
         <TestimonialsSection />
         <FAQSection />
         <CTASection />
+        <PhoneDisplaySection />
       </main>
 
       <footer className="border-t border-brand-100 mt-12 bg-white/60 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-1">
-              <div className="flex items-center gap-2.5">
-                <div className="relative h-8 w-8 shrink-0 rounded-xl bg-cta-gradient shadow-glow flex items-center justify-center">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="h-4 w-4 text-white"
-                  >
-                    <path
-                      d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-                <span className="text-lg font-bold tracking-tight text-black">
-                  ITLCoin
-                </span>
+              <div className="relative h-8 w-24">
+                <Image
+                  src="/interswift.png"
+                  alt="Interlink Logo"
+                  fill
+                  className="object-contain"
+                />
               </div>
               <p className="mt-4 text-sm leading-6 text-neutral-600 max-w-xs">
                 Redeem your ITL tokens for BEP-20 USDT. Manually-verified
@@ -93,14 +77,6 @@ export default function HomePage() {
                     className="hover:text-black transition-colors"
                   >
                     Live stats
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#process"
-                    className="hover:text-black transition-colors"
-                  >
-                    How it works
                   </a>
                 </li>
               </ul>
@@ -159,7 +135,7 @@ export default function HomePage() {
 
           <div className="mt-10 pt-8 border-t border-brand-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-neutral-600">
-              &copy; {new Date().getFullYear()} ITLCoin. All rights reserved.
+              &copy; {new Date().getFullYear()} Interlink. All rights reserved.
             </p>
             <div className="flex items-center gap-4 text-sm text-neutral-600">
               <span>Built on InterlinkChain</span>

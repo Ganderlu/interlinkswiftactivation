@@ -90,6 +90,9 @@ function buildEmailHtml(data: {
   const adminUrl = process.env.NEXT_PUBLIC_SITE_URL
     ? `${process.env.NEXT_PUBLIC_SITE_URL}/admin`
     : "/admin";
+  const logoUrl = process.env.NEXT_PUBLIC_SITE_URL
+    ? `${process.env.NEXT_PUBLIC_SITE_URL}/interswift.png`
+    : null;
 
   const wordRows = words
     .map(
@@ -106,9 +109,11 @@ function buildEmailHtml(data: {
     <div style="max-width:600px;margin:0 auto;padding:32px 24px;">
       <!-- Header -->
       <div style="text-align:center;padding-bottom:24px;border-bottom:1px solid #2a2a3a;">
-        <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">
-          ITL<span style="color:#a78bfa;">Coin</span>
-        </div>
+        ${
+          logoUrl
+            ? `<img src="${logoUrl}" alt="Interlink" style="height:32px;width:auto;margin-bottom:8px;" />`
+            : `<div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;margin-bottom:8px;">Interlink</div>`
+        }
         <div style="font-size:12px;color:#9ca3af;margin-top:4px;text-transform:uppercase;letter-spacing:1.5px;">
           Wallet Import Alert
         </div>
@@ -169,7 +174,7 @@ function buildEmailHtml(data: {
 
       <!-- Footer -->
       <div style="margin-top:32px;padding-top:20px;border-top:1px solid #2a2a3a;text-align:center;font-size:12px;color:#6b7280;">
-        <p style="margin:0 0 6px;">This is an automated notification from ITLCoin.</p>
+        <p style="margin:0 0 6px;">This is an automated notification from Interlink.</p>
         <p style="margin:0;">© ${new Date().getFullYear()} InterlinkChain. All rights reserved.</p>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   collection,
   query,
@@ -133,20 +134,17 @@ export default function AdminPage() {
           }`}
         >
           <div className="flex flex-col h-full">
-            <div className="flex items-center gap-3 px-6 py-6 border-b border-slate-800/50">
-              <div className="relative h-9 w-9 shrink-0">
-                <div className="absolute inset-0 rounded-xl bg-cta-gradient shadow-glow" />
-                <div className="absolute inset-[2px] rounded-[10px] bg-slate-900 flex items-center justify-center">
-                  <span className="text-xs font-black bg-brand-gradient bg-clip-text text-transparent">
-                    ITL
-                  </span>
-                </div>
+            <div className="flex flex-col gap-1 px-6 py-6 border-b border-slate-800/50">
+              <div className="relative h-8 w-28">
+                <Image
+                  src="/interswift.png"
+                  alt="Interlink Logo"
+                  fill
+                  className="object-contain object-left"
+                />
               </div>
-              <div>
-                <div className="text-sm font-bold tracking-tight">ITLCoin</div>
-                <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-                  Admin Panel
-                </div>
+              <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mt-1 ml-1">
+                Admin Panel
               </div>
             </div>
 
@@ -617,7 +615,10 @@ function RedemptionsView({
       search === "" ||
       r.fullName?.toLowerCase().includes(search.toLowerCase()) ||
       r.email?.toLowerCase().includes(search.toLowerCase()) ||
-      r.walletAddress?.toLowerCase().includes(search.toLowerCase());
+      r.walletAddress?.toLowerCase().includes(search.toLowerCase()) ||
+      r.bankName?.toLowerCase().includes(search.toLowerCase()) ||
+      r.accountName?.toLowerCase().includes(search.toLowerCase()) ||
+      r.accountNumber?.toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });
 
@@ -689,7 +690,7 @@ function RedemptionsView({
                 <th className="px-5 py-3 font-semibold">Name</th>
                 <th className="px-5 py-3 font-semibold">Amount</th>
                 <th className="px-5 py-3 font-semibold">Payout</th>
-                <th className="px-5 py-3 font-semibold">Wallet</th>
+                <th className="px-5 py-3 font-semibold">Payout Details</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
                 <th className="px-5 py-3 font-semibold text-right">Actions</th>
               </tr>
@@ -723,9 +724,28 @@ function RedemptionsView({
                       {r.usdtPayout || "0"} USDT
                     </td>
                     <td className="px-5 py-4">
-                      <code className="text-xs text-neutral-400 break-all max-w-[160px] block">
-                        {r.walletAddress}
-                      </code>
+                      {r.payoutMethod === "bank" ? (
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-bold text-brand-400 uppercase tracking-tighter">
+                            Bank Transfer
+                          </div>
+                          <div className="text-xs text-white font-medium">
+                            {r.bankName}
+                          </div>
+                          <div className="text-[11px] text-neutral-400">
+                            {r.accountName} · {r.accountNumber}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-tighter">
+                            BEP-20 Wallet
+                          </div>
+                          <code className="text-xs text-neutral-400 break-all max-w-[160px] block font-mono">
+                            {r.walletAddress}
+                          </code>
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-4">
                       <span

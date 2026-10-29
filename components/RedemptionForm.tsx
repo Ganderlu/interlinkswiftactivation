@@ -22,7 +22,11 @@ export default function RedemptionForm({
   const [itlAmount, setItlAmount] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [payoutMethod, setPayoutMethod] = useState<"crypto" | "bank">("crypto");
   const [walletAddress, setWalletAddress] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
   const [proofFile, setProofFile] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -68,10 +72,17 @@ export default function RedemptionForm({
       if (!email.trim()) return "Please enter your email address.";
       const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
       if (!emailOk) return "Please enter a valid email address.";
-      if (!walletAddress.trim())
-        return "Please enter your BNB Smart Chain (BEP-20) wallet address.";
-      if (!isValidBep20Address(walletAddress)) {
-        return "That wallet address doesn't look right. A BEP-20 address starts with 0x followed by 40 characters (0-9, a-f).";
+
+      if (payoutMethod === "crypto") {
+        if (!walletAddress.trim())
+          return "Please enter your BNB Smart Chain (BEP-20) wallet address.";
+        if (!isValidBep20Address(walletAddress)) {
+          return "That wallet address doesn't look right. A BEP-20 address starts with 0x followed by 40 characters (0-9, a-f).";
+        }
+      } else {
+        if (!bankName.trim()) return "Please enter your bank name.";
+        if (!accountName.trim()) return "Please enter your account name.";
+        if (!accountNumber.trim()) return "Please enter your account number.";
       }
       return null;
     }
@@ -107,6 +118,18 @@ export default function RedemptionForm({
     setWalletAddress(v);
     if (stepError) setStepError(null);
   };
+  const updateBankName = (v: string) => {
+    setBankName(v);
+    if (stepError) setStepError(null);
+  };
+  const updateAccountName = (v: string) => {
+    setAccountName(v);
+    if (stepError) setStepError(null);
+  };
+  const updateAccountNumber = (v: string) => {
+    setAccountNumber(v);
+    if (stepError) setStepError(null);
+  };
   const updateProofFile = (v: string) => {
     setProofFile(v);
     if (stepError) setStepError(null);
@@ -130,7 +153,11 @@ export default function RedemptionForm({
         const docRef = await addDoc(collection(db, "redemptions"), {
           fullName: fullName.trim(),
           email: email.trim(),
-          walletAddress: walletAddress.trim(),
+          payoutMethod,
+          walletAddress: payoutMethod === "crypto" ? walletAddress.trim() : "",
+          bankName: payoutMethod === "bank" ? bankName.trim() : "",
+          accountName: payoutMethod === "bank" ? accountName.trim() : "",
+          accountNumber: payoutMethod === "bank" ? accountNumber.trim() : "",
           itlAmount: itlAmount.trim(),
           usdtPayout,
           transactionProof: proofFile,
@@ -149,7 +176,13 @@ export default function RedemptionForm({
               id: docRef.id,
               fullName: fullName.trim(),
               email: email.trim(),
-              walletAddress: walletAddress.trim(),
+              payoutMethod,
+              walletAddress:
+                payoutMethod === "crypto" ? walletAddress.trim() : "",
+              bankName: payoutMethod === "bank" ? bankName.trim() : "",
+              accountName: payoutMethod === "bank" ? accountName.trim() : "",
+              accountNumber:
+                payoutMethod === "bank" ? accountNumber.trim() : "",
               itlAmount: itlAmount.trim(),
               usdtPayout,
               transactionProof: proofFile,
@@ -182,7 +215,11 @@ export default function RedemptionForm({
     setItlAmount("");
     setFullName("");
     setEmail("");
+    setPayoutMethod("crypto");
     setWalletAddress("");
+    setBankName("");
+    setAccountName("");
+    setAccountNumber("");
     setProofFile("");
     setIsSubmitted(false);
     setError(null);
@@ -339,8 +376,16 @@ export default function RedemptionForm({
               setFullName={updateFullName}
               email={email}
               setEmail={updateEmail}
+              payoutMethod={payoutMethod}
+              setPayoutMethod={setPayoutMethod}
               walletAddress={walletAddress}
               setWalletAddress={updateWalletAddress}
+              bankName={bankName}
+              setBankName={updateBankName}
+              accountName={accountName}
+              setAccountName={updateAccountName}
+              accountNumber={accountNumber}
+              setAccountNumber={updateAccountNumber}
             />
           ) : currentStep === 3 ? (
             <StepSend
@@ -354,7 +399,11 @@ export default function RedemptionForm({
               usdtPayout={usdtPayout}
               fullName={fullName}
               email={email}
+              payoutMethod={payoutMethod}
               walletAddress={walletAddress}
+              bankName={bankName}
+              accountName={accountName}
+              accountNumber={accountNumber}
               proofFile={proofFile}
             />
           )}
@@ -536,99 +585,230 @@ function StepDetails({
   setFullName,
   email,
   setEmail,
+  payoutMethod,
+  setPayoutMethod,
   walletAddress,
   setWalletAddress,
+  bankName,
+  setBankName,
+  accountName,
+  setAccountName,
+  accountNumber,
+  setAccountNumber,
 }: {
   fullName: string;
   setFullName: (v: string) => void;
   email: string;
   setEmail: (v: string) => void;
+  payoutMethod: "crypto" | "bank";
+  setPayoutMethod: (v: "crypto" | "bank") => void;
   walletAddress: string;
   setWalletAddress: (v: string) => void;
+  bankName: string;
+  setBankName: (v: string) => void;
+  accountName: string;
+  setAccountName: (v: string) => void;
+  accountNumber: string;
+  setAccountNumber: (v: string) => void;
 }) {
   const trimmedWallet = walletAddress.trim();
   const walletValid =
     trimmedWallet.length > 0 && /^0x[a-fA-F0-9]{40}$/.test(trimmedWallet);
 
   return (
-    <div className="space-y-5">
-      <Field
-        id="full-name"
-        label="Full name"
-        placeholder="Jane Doe"
-        value={fullName}
-        onChange={setFullName}
-        helper="Your First and Last name"
-      />
-      <Field
-        id="email"
-        label="Email address"
-        type="email"
-        placeholder="you@example.com"
-        value={email}
-        onChange={setEmail}
-        helper="We'll only use this to contact you about your redemption request"
-      />
-      <div>
-        <label htmlFor="wallet" className="field-label">
-          BNB Smart Chain (BEP-20) wallet address
-        </label>
-        <div className="relative">
-          <input
-            id="wallet"
-            type="text"
-            placeholder="0x…"
-            value={walletAddress}
-            onChange={(e) => setWalletAddress(e.target.value)}
-            className={`w-full field-input pr-11 font-mono ${
-              trimmedWallet.length > 0
-                ? walletValid
-                  ? "border-emerald-500/60 focus:border-emerald-500 focus:ring-emerald-500/30"
-                  : "border-red-500/60 focus:border-red-500 focus:ring-red-500/30"
-                : ""
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <Field
+          id="full-name"
+          label="Full name"
+          placeholder="Jane Doe"
+          value={fullName}
+          onChange={setFullName}
+          helper="Your First and Last name"
+        />
+        <Field
+          id="email"
+          label="Email address"
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={setEmail}
+          helper="We'll only use this for request updates"
+        />
+      </div>
+
+      <div className="pt-2">
+        <label className="field-label mb-3 block">Payout Method</label>
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => setPayoutMethod("crypto")}
+            className={`flex flex-col items-center gap-3 rounded-2xl border p-4 text-center transition-all ${
+              payoutMethod === "crypto"
+                ? "border-brand-500 bg-brand-50/50 ring-2 ring-brand-500/20"
+                : "border-brand-100 bg-white hover:border-brand-200"
             }`}
-          />
-          {trimmedWallet.length > 0 ? (
-            <span className="absolute right-3.5 top-1/2 -translate-y-1/2">
-              {walletValid ? (
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="h-5 w-5 text-emerald-400"
-                >
-                  <path
-                    d="m5 12 5 5L20 7"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="h-5 w-5 text-red-400"
-                >
-                  <path
-                    d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
-            </span>
-          ) : null}
+          >
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                payoutMethod === "crypto"
+                  ? "bg-brand-500 text-white"
+                  : "bg-brand-50 text-brand-500"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+                <path
+                  d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <path
+                  d="M12 8v8m-3-3 3 3 3-3"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <div>
+              <div className="text-sm font-bold text-brand-900">
+                BEP-20 Wallet
+              </div>
+              <div className="text-[10px] text-brand-500 uppercase tracking-wider font-medium mt-0.5">
+                Fast & Secure
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPayoutMethod("bank")}
+            className={`flex flex-col items-center gap-3 rounded-2xl border p-4 text-center transition-all ${
+              payoutMethod === "bank"
+                ? "border-brand-500 bg-brand-50/50 ring-2 ring-brand-500/20"
+                : "border-brand-100 bg-white hover:border-brand-200"
+            }`}
+          >
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                payoutMethod === "bank"
+                  ? "bg-brand-500 text-white"
+                  : "bg-brand-50 text-brand-500"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+                <path
+                  d="M3 21h18M3 10h18M5 10V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3M7 10v7m4-7v7m6-7v7"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <div>
+              <div className="text-sm font-bold text-brand-900">
+                Bank Transfer
+              </div>
+              <div className="text-[10px] text-brand-500 uppercase tracking-wider font-medium mt-0.5">
+                Direct to Account
+              </div>
+            </div>
+          </button>
         </div>
-        <span className="field-helper">
-          {trimmedWallet.length === 0
-            ? "Make sure this wallet supports BEP-20 USDT"
-            : walletValid
-              ? "Valid BEP-20 wallet address"
-              : "Address must start with 0x and contain 40 characters (0-9, a-f)"}
-        </span>
+      </div>
+
+      <div className="pt-2">
+        {payoutMethod === "crypto" ? (
+          <div>
+            <label htmlFor="wallet" className="field-label">
+              BNB Smart Chain (BEP-20) wallet address
+            </label>
+            <div className="relative">
+              <input
+                id="wallet"
+                type="text"
+                placeholder="0x…"
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                className={`w-full field-input pr-11 font-mono ${
+                  trimmedWallet.length > 0
+                    ? walletValid
+                      ? "border-emerald-500/60 focus:border-emerald-500 focus:ring-emerald-500/30"
+                      : "border-red-500/60 focus:border-red-500 focus:ring-red-500/30"
+                    : ""
+                }`}
+              />
+              {trimmedWallet.length > 0 ? (
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                  {walletValid ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="h-5 w-5 text-emerald-400"
+                    >
+                      <path
+                        d="m5 12 5 5L20 7"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="h-5 w-5 text-red-400"
+                    >
+                      <path
+                        d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </span>
+              ) : null}
+            </div>
+            <span className="field-helper">
+              {trimmedWallet.length === 0
+                ? "Make sure this wallet supports BEP-20 USDT"
+                : walletValid
+                  ? "Valid BEP-20 wallet address"
+                  : "Address must start with 0x and contain 40 characters (0-9, a-f)"}
+            </span>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Field
+              id="bank-name"
+              label="Bank Name"
+              placeholder="Enter bank name"
+              value={bankName}
+              onChange={setBankName}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field
+                id="account-name"
+                label="Account Name"
+                placeholder="Name on account"
+                value={accountName}
+                onChange={setAccountName}
+              />
+              <Field
+                id="account-number"
+                label="Account Number"
+                placeholder="10 or 12 digit number"
+                value={accountNumber}
+                onChange={setAccountNumber}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -848,14 +1028,22 @@ function StepConfirm({
   usdtPayout,
   fullName,
   email,
+  payoutMethod,
   walletAddress,
+  bankName,
+  accountName,
+  accountNumber,
   proofFile,
 }: {
   itlAmount: string;
   usdtPayout: string;
   fullName: string;
   email: string;
+  payoutMethod: "crypto" | "bank";
   walletAddress: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
   proofFile: string;
 }) {
   const shortWallet =
@@ -872,7 +1060,19 @@ function StepConfirm({
         <Row k="Payout amount" v={`${usdtPayout} USDT`} strong />
         <Row k="Name" v={fullName || "—"} />
         <Row k="Email" v={email || "—"} />
-        <Row k="Wallet (BEP-20)" v={shortWallet} />
+        <Row
+          k="Payout method"
+          v={payoutMethod === "crypto" ? "BEP-20 Wallet" : "Bank Transfer"}
+        />
+        {payoutMethod === "crypto" ? (
+          <Row k="Wallet (BEP-20)" v={shortWallet} />
+        ) : (
+          <>
+            <Row k="Bank Name" v={bankName || "—"} />
+            <Row k="Account Name" v={accountName || "—"} />
+            <Row k="Account Number" v={accountNumber || "—"} />
+          </>
+        )}
         <div className="py-3 first:pt-0 last:pb-0">
           <span className="text-sm text-brand-600">Transaction proof</span>
           {proofIsUrl ? (

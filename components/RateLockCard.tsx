@@ -1,20 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { onSettingsChange } from "@/lib/settings";
+import { DEFAULT_SETTINGS, type PlatformSettings } from "@/types";
 
 const START_SECONDS = 60;
 const INITIAL_DISPLAY = 43;
 
 export default function RateLockCard() {
   const [secondsLeft, setSecondsLeft] = useState<number>(INITIAL_DISPLAY);
+  const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+
+    // Subscribe to live settings (payout rate)
+    const unsubSettings = onSettingsChange(setSettings);
+
     const id = setInterval(() => {
       setSecondsLeft((prev) => (prev <= 1 ? START_SECONDS : prev - 1));
     }, 1000);
-    return () => clearInterval(id);
+
+    return () => {
+      unsubSettings();
+      clearInterval(id);
+    };
   }, []);
 
   const size = 140;
@@ -82,7 +93,8 @@ export default function RateLockCard() {
       </div>
 
       <div className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3.5 py-1.5 text-sm font-semibold text-brand-700">
-        1 ITL <span className="text-brand-400">=</span> 2 USDT
+        1 ITL <span className="text-brand-400">=</span> {settings.payoutRate}{" "}
+        USDT
       </div>
     </div>
   );

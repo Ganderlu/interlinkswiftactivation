@@ -396,6 +396,7 @@ export default function RedemptionForm({
           ) : (
             <StepConfirm
               itlAmount={itlAmount}
+              payoutRate={settings.payoutRate}
               usdtPayout={usdtPayout}
               fullName={fullName}
               email={email}
@@ -1025,6 +1026,7 @@ function StepSend({
 
 function StepConfirm({
   itlAmount,
+  payoutRate,
   usdtPayout,
   fullName,
   email,
@@ -1036,6 +1038,7 @@ function StepConfirm({
   proofFile,
 }: {
   itlAmount: string;
+  payoutRate: number;
   usdtPayout: string;
   fullName: string;
   email: string;
@@ -1056,7 +1059,7 @@ function StepConfirm({
     <div className="space-y-4">
       <div className="glass-card p-5 bg-white/90 divide-y divide-brand-100">
         <Row k="ITL to redeem" v={`${itlAmount || "0"} ITL`} />
-        <Row k="Payout rate" v="1 ITL = 2 USDT" />
+        <Row k="Payout rate" v={`1 ITL = ${payoutRate} USDT`} />
         <Row k="Payout amount" v={`${usdtPayout} USDT`} strong />
         <Row k="Name" v={fullName || "—"} />
         <Row k="Email" v={email || "—"} />
